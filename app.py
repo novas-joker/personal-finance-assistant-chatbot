@@ -1,7 +1,9 @@
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime
+from finance_helper import FinanceHelper  # Import the FinanceHelper class
 
 app = Flask(__name__)
+finance_helper = FinanceHelper()  # Create an instance of FinanceHelper
 
 @app.route('/')
 def home():
@@ -9,13 +11,19 @@ def home():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_message = request.json.get('message', '')
+    user_message = request.json.get('message', '').lower()  # Convert to lowercase for easier matching
     
-    # Simple response for now - we'll enhance this later
-    response = {
-        'message': "I'm your personal finance assistant. I can help you with budgeting and financial advice.",
-        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    }
+    if "budgeting apps" in user_message or "recommend" in user_message:
+        response = finance_helper.get_budgeting_app_recommendation()
+    elif "create budget" in user_message:
+        # Extract income from the message (this is a simple example, you may want to improve this)
+        income = user_message.split('$')[-1].strip()  # Get the income value after '$'
+        response = finance_helper.create_basic_budget_plan(income)
+    else:
+        response = {
+            'message': "I'm your personal finance assistant. I can help you with budgeting and financial advice.",
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
     
     return jsonify(response)
 
