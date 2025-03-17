@@ -19,5 +19,12 @@ def chat():
     
     return jsonify(response)
 
+# Vercel requires this
+@app.route('/_vercel_health_check', methods=['GET'])
+def health_check():
+    return 'ok'
+
 if __name__ == '__main__':
-    app.run(debug=True) 
+    # This is used when running locally only. When deploying to Vercel, 
+    # Vercel will serve the app through WSGI
+    app.run(host='0.0.0.0', debug=True) 
