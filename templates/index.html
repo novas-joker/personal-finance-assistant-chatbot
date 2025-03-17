@@ -26,15 +26,15 @@
             text-align: center;
         }
         .chat-messages {
-            height: 400px;
+            height: 500px;
             overflow-y: auto;
             padding: 20px;
         }
         .message {
             margin-bottom: 15px;
-            padding: 10px 15px;
+            padding: 15px;
             border-radius: 15px;
-            max-width: 70%;
+            max-width: 80%;
         }
         .user-message {
             background: #3498db;
@@ -56,6 +56,7 @@
             border: none;
             border-radius: 20px;
             margin-right: 10px;
+            font-size: 16px;
         }
         #send-button {
             padding: 10px 20px;
@@ -64,9 +65,65 @@
             border: none;
             border-radius: 20px;
             cursor: pointer;
+            font-size: 16px;
         }
         #send-button:hover {
             background: #34495e;
+        }
+        .app-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .app-features {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .app-features li {
+            margin: 5px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        .app-features li:before {
+            content: "•";
+            position: absolute;
+            left: 0;
+        }
+        .budget-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        .budget-table th, .budget-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
+            text-align: left;
+        }
+        .budget-table th {
+            background: #f8f9fa;
+        }
+        .tips-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .tips-list li {
+            margin: 8px 0;
+            padding-left: 24px;
+            position: relative;
+        }
+        .tips-list li:before {
+            content: "💡";
+            position: absolute;
+            left: 0;
+        }
+        .app-link {
+            color: #3498db;
+            text-decoration: none;
+        }
+        .app-link:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -79,7 +136,7 @@
             <!-- Messages will be added here dynamically -->
         </div>
         <div class="chat-input">
-            <input type="text" id="message-input" placeholder="Type your message here...">
+            <input type="text" id="message-input" placeholder="Type your message here... (e.g., 'suggest budget apps')">
             <button id="send-button">Send</button>
         </div>
     </div>
@@ -91,13 +148,66 @@
             const sendButton = document.getElementById('send-button');
 
             // Add welcome message
-            addMessage("Hello! I'm your personal finance assistant. How can I help you today?", 'bot');
+            addMessage("Hello! I'm your personal finance assistant. I can help you with:\n1. Recommending budgeting apps\n2. Creating a basic budget\n3. Providing budgeting tips\n\nTry asking me something like 'suggest budget apps' or 'create budget for $3000'!", 'bot');
 
-            function addMessage(message, type) {
+            function formatBudgetApps(apps) {
+                let html = '';
+                for (const [name, info] of Object.entries(apps)) {
+                    html += `
+                        <div class="app-card">
+                            <h3>${name}</h3>
+                            <p>${info.description}</p>
+                            <ul class="app-features">
+                                ${info.features.map(feature => `<li>${feature}</li>`).join('')}
+                            </ul>
+                            <a href="${info.url}" class="app-link" target="_blank">Learn More</a>
+                        </div>
+                    `;
+                }
+                return html;
+            }
+
+            function formatBudget(budget) {
+                let html = '<table class="budget-table"><tr><th>Category</th><th>Amount</th></tr>';
+                for (const [category, amount] of Object.entries(budget)) {
+                    html += `<tr><td>${category}</td><td>$${amount.toFixed(2)}</td></tr>`;
+                }
+                html += '</table>';
+                return html;
+            }
+
+            function formatTips(tips) {
+                return `<ul class="tips-list">${tips.map(tip => `<li>${tip}</li>`).join('')}</ul>`;
+            }
+
+            function addMessage(content, type) {
                 const messageDiv = document.createElement('div');
                 messageDiv.classList.add('message');
                 messageDiv.classList.add(type + '-message');
-                messageDiv.textContent = message;
+
+                // Handle different types of content
+                if (typeof content === 'object') {
+                    let html = '';
+                    if (content.message) {
+                        html += `<p>${content.message}</p>`;
+                    }
+                    if (content.apps) {
+                        html += formatBudgetApps(content.apps);
+                    }
+                    if (content.budget) {
+                        html += formatBudget(content.budget);
+                    }
+                    if (content.tips) {
+                        html += formatTips(content.tips);
+                    }
+                    if (content.general_tips) {
+                        html += formatTips(content.general_tips);
+                    }
+                    messageDiv.innerHTML = html;
+                } else {
+                    messageDiv.textContent = content;
+                }
+
                 messagesContainer.appendChild(messageDiv);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
@@ -118,7 +228,7 @@
                             body: JSON.stringify({ message: message })
                         });
                         const data = await response.json();
-                        addMessage(data.message, 'bot');
+                        addMessage(data, 'bot');
                     } catch (error) {
                         addMessage('Sorry, there was an error processing your request.', 'bot');
                     }
