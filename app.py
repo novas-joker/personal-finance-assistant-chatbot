@@ -1,33 +1,47 @@
 from flask import Flask, render_template, request, jsonify
+import google.generativeai as genai
 from datetime import datetime
-from finance_helper import FinanceHelper  # Import the FinanceHelper class
+import os
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 app = Flask(__name__)
-finance_helper = FinanceHelper()  # Create an instance of FinanceHelper
+
+# Configure Gemini API
+genai.configure(api_key=os.getenv('GOOGLE_API_KEY'))
+model = genai.GenerativeModel('gemini-pro')
+
+# Initialize chat
+chat = model.start_chat(history=[])
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
-def chat():
-    user_message = request.json.get('message', '').lower()  # Convert to lowercase for easier matching
-    
-    if "budgeting apps" in user_message or "recommend" in user_message:
-        response = finance_helper.get_budgeting_app_recommendation()
-    elif "create budget" in user_message:
-        # Extract income from the message (this is a simple example, you may want to improve this)
-        income = user_message.split('$')[-1].strip()  # Get the income value after '$'
-        response = finance_helper.create_basic_budget_plan(income)
-    else:
-        response = {
-            'message': "I'm your personal finance assistant. I can help you with budgeting and financial advice.",
+def process_chat():
+    try:
+        user_message = request.json.get('message', '')
+        
+        # Get response from Gemini
+        response = chat.send_message(user_message)
+        
+        # Prepare the response
+        chat_response = {
+            'message': response.text,
             'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
+        
+        return jsonify(chat_response)
     
-    return jsonify(response)
+    except Exception as e:
+        return jsonify({
+            'message': f"I apologize, but I encountered an error: {str(e)}",
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }), 500
 
-# Vercel requires this
 @app.route('/_vercel_health_check', methods=['GET'])
 def health_check():
     return 'ok'
